@@ -8,11 +8,12 @@ class Database:
 
     def create_table(self):
         with self.connection:
+            # We changed DEFAULT 1 to DEFAULT 0 here
             self.cursor.execute("""
                 CREATE TABLE IF NOT EXISTS groups (
                     chat_id INTEGER PRIMARY KEY,
                     chat_title TEXT,
-                    is_active INTEGER DEFAULT 1
+                    is_active INTEGER DEFAULT 0
                 )
             """)
 
@@ -31,5 +32,7 @@ class Database:
     def get_all_groups(self, only_active=False):
         with self.connection:
             if only_active:
+                # Returns a simple list of IDs for sending
                 return self.cursor.execute("SELECT chat_id, chat_title FROM groups WHERE is_active = 1").fetchall()
+            # Returns all groups for the Management UI
             return self.cursor.execute("SELECT chat_id, chat_title, is_active FROM groups").fetchall()
