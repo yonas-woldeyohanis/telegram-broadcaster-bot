@@ -11,7 +11,8 @@ class Database:
             self.cursor.execute("""
                 CREATE TABLE IF NOT EXISTS groups (
                     chat_id INTEGER PRIMARY KEY,
-                    chat_title TEXT
+                    chat_title TEXT,
+                    is_active INTEGER DEFAULT 1
                 )
             """)
 
@@ -19,10 +20,12 @@ class Database:
         with self.connection:
             return self.cursor.execute("INSERT OR IGNORE INTO groups (chat_id, chat_title) VALUES (?, ?)", (chat_id, title))
 
-    def remove_group(self, chat_id):
+    def toggle_group(self, chat_id):
         with self.connection:
-            return self.cursor.execute("DELETE FROM groups WHERE chat_id = ?", (chat_id,))
+            return self.cursor.execute("UPDATE groups SET is_active = 1 - is_active WHERE chat_id = ?", (chat_id,))
 
-    def get_all_groups(self):
+    def get_all_groups(self, only_active=False):
         with self.connection:
-            return self.cursor.execute("SELECT chat_id FROM groups").fetchall()
+            if only_active:
+                return self.cursor.execute("SELECT chat_id, chat_title FROM groups WHERE is_active = 1").fetchall()
+            return self.cursor.execute("SELECT chat_id, chat_title, is_active FROM groups").fetchall()
