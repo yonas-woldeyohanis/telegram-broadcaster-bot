@@ -130,7 +130,10 @@ async def process_send(callback: CallbackQuery, state: FSMContext):
     groups = db.get_all_groups(only_active=only_active)
 
     if not groups:
-        await callback.answer("❌ No groups to send to!", show_alert=True)
+        if only_active:
+            await callback.answer("⚠️ You haven't selected any groups yet!\n\nGo to 'Manage Groups' and click on the groups you want to activate.", show_alert=True)
+        else:
+            await callback.answer("❌ No groups found in database!", show_alert=True)
         return
 
     kb = None
@@ -142,16 +145,23 @@ async def process_send(callback: CallbackQuery, state: FSMContext):
     status_msg = await callback.message.edit_text(f"🚀 Sending to {len(groups)} groups...")
     
     success = 0
+    # The *extra handles the fact that 'send_all' has 3 values and 'send_selected' has 2
     for gid, title, *extra in groups:
         try:
             await bot.copy_message(chat_id=gid, from_chat_id=callback.message.chat.id, 
                                    message_id=data['msg_id'], reply_markup=kb)
             success += 1
-            await asyncio.sleep(0.1) # Safe speed
+            await asyncio.sleep(0.1) 
         except Exception as e:
             logging.error(f"Failed to send to {title}: {e}")
 
-    await status_msg.edit_text(f"✅ **Broadcast Finished!**\n\nTotal Groups: {len(groups)}\nSuccess: {success}\nFailed: {len(groups)-success}", reply_markup=main_menu())
+    await status_msg.edit_text(
+        f"✅ **Broadcast Finished!**\n\n"
+        f"Target: {'Selected Only' if only_active else 'All Groups'}\n"
+        f"Success: {success}\n"
+        f"Failed: {len(groups)-success}", 
+        reply_markup=main_menu()
+    )
     await state.clear()
 
 @dp.callback_query(F.data == "cancel")
