@@ -8,7 +8,7 @@ class Database:
 
     def create_table(self):
         with self.connection:
-            # We changed DEFAULT 1 to DEFAULT 0 here
+            # Groups table
             self.cursor.execute("""
                 CREATE TABLE IF NOT EXISTS groups (
                     chat_id INTEGER PRIMARY KEY,
@@ -16,10 +16,24 @@ class Database:
                     is_active INTEGER DEFAULT 0
                 )
             """)
+            # Global Stats table
+            self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS stats (
+                    id INTEGER PRIMARY KEY,
+                    total_broadcasts INTEGER DEFAULT 0,
+                    total_messages_delivered INTEGER DEFAULT 0
+                )
+            """)
+            # Initialize stats row if empty
+            self.cursor.execute("INSERT OR IGNORE INTO stats (id, total_broadcasts, total_messages_delivered) VALUES (1, 0, 0)")
 
     def add_group(self, chat_id, title):
         with self.connection:
             return self.cursor.execute("INSERT OR REPLACE INTO groups (chat_id, chat_title) VALUES (?, ?)", (chat_id, title))
+
+    def remove_group(self, chat_id):
+        with self.connection:
+            return self.cursor.execute("DELETE FROM groups WHERE chat_id = ?", (chat_id,))
 
     def toggle_group(self, chat_id):
         with self.connection:
@@ -32,7 +46,13 @@ class Database:
     def get_all_groups(self, only_active=False):
         with self.connection:
             if only_active:
-                # Returns a simple list of IDs for sending
                 return self.cursor.execute("SELECT chat_id, chat_title FROM groups WHERE is_active = 1").fetchall()
-            # Returns all groups for the Management UI
             return self.cursor.execute("SELECT chat_id, chat_title, is_active FROM groups").fetchall()
+
+    def update_broadcast_stats(self, delivered_count):
+        with self.connection:
+            self.cursor.execute("UPDATE stats SET total_broadcasts = total_broadcasts + 1, total_messages_delivered = total_messages_delivered + ?", (delivered_count,))
+
+    def get_global_stats(self):
+        with self.connection:
+            return self.cursor.execute("SELECT total_broadcasts, total_messages_delivered FROM stats WHERE id = 1").fetchone()
