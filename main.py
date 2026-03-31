@@ -32,6 +32,7 @@ def main_menu():
     builder.row(InlineKeyboardButton(text="📢 Broadcast Studio", callback_data="studio"))
     builder.row(InlineKeyboardButton(text="⚙️ Manage Groups", callback_data="manage_groups"))
     builder.row(InlineKeyboardButton(text="📊 Detailed Stats", callback_data="view_stats"))
+    # We add a small return button if we are already in a sub-menu
     return builder.as_markup()
 
 # --- COMMAND HANDLERS ---
@@ -54,6 +55,33 @@ async def stats_cmd(message: Message):
         f"📩 Total Messages Delivered: {b_stats[1]}"
     )
     await message.answer(text, parse_mode="Markdown")
+
+
+
+# --- CALLBACK HANDLER FOR THE STATS BUTTON ---
+@dp.callback_query(F.data == "view_stats")
+async def callback_stats(callback: CallbackQuery):
+    groups = db.get_all_groups()
+    active_count = len([g for g in groups if g[2] == 1])
+    b_stats = db.get_global_stats()
+    
+    stats_text = (
+        "📊 **Detailed Statistics**\n\n"
+        f"👥 **Total Groups:** {len(groups)}\n"
+        f"🎯 **Active Targets:** {active_count}\n"
+        f"🚀 **Total Broadcasts:** {b_stats[0]}\n"
+        f"📩 **Messages Delivered:** {b_stats[1]}\n\n"
+        "*(Note: 'Active' groups are those with a ✅ in Manage Groups)*"
+    )
+    
+    # We use edit_text to keep the chat clean
+    await callback.message.edit_text(
+        stats_text, 
+        reply_markup=main_menu(), 
+        parse_mode="Markdown"
+    )
+    # This removes the "loading" spinner on the button
+    await callback.answer()
 
 @dp.message(Command("help"), F.from_user.id == ADMIN_ID)
 async def help_cmd(message: Message):
