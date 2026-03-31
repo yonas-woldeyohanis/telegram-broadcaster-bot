@@ -1,6 +1,7 @@
 import os
 import asyncio
 import logging
+from aiohttp import web
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import Message, InlineKeyboardButton, CallbackQuery, ChatMemberUpdated
@@ -168,9 +169,19 @@ async def process_send(callback: CallbackQuery, state: FSMContext):
 async def cancel(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.message.edit_text("🛠 **Broadcast Control Center**", reply_markup=main_menu())
-
+async def handle(request):
+    return web.Response(text="Bot is running!")
 async def main():
+    # Start a dummy web server on port 10000 (Render default)
+    app = web.Application()
+    app.router.add_get("/", handle)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', 10000)
+    asyncio.create_task(site.start())
+
     logging.basicConfig(level=logging.INFO)
+    print("Bot is live on the cloud...")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
